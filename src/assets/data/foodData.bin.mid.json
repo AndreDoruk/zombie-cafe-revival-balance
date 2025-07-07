@@ -3,7 +3,7 @@
         "Name": "Mystery Meat",
         "Price": 8,
         "UnlockLevel": 1,
-        "CookTimeMinutes": 2,
+        "CookTimeMinutes": 0.9,
         "Servings": 12,
         "PricePerSeving": 1,
         "ExperiencePoints": 1,
