@@ -5826,7 +5826,7 @@
     {
         "UnlockLevel": 0,
         "Name": "10 Toxin",
-        "Price": 20,
+        "Price": 2000,
         "PurchaseWithToxin": false,
         "SizeX": 1,
         "SizeY": 1,
