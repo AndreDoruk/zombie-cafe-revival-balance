@@ -59,21 +59,27 @@ jobs:
     
     - name: Patch package name for test build
       run: |
-        OLD_PKG="com/capcom/zombiecafe"
-        NEW_PKG="com/capcom/zombiecafe/test"
+        OLD_PACKAGE_NAME="com.capcom.zombiecafe"
+        NEW_PACKAGE_NAME="com.capcom.zombiecafe.test"
+        OLD_PKG_PATH="com/capcom/zombiecafe"
+        NEW_PKG_PATH="com/capcom/zombiecafe/test"
 
-        # Replace package in AndroidManifest.xml
-        sed -i 's/package="com.capcom.zombiecafe"/package="com.capcom.zombiecafe.test"/' build/AndroidManifest.xml
+        # 1. Change package in AndroidManifest.xml
+        sed -i "s/package=\"$OLD_PACKAGE_NAME\"/package=\"$NEW_PACKAGE_NAME\"/" build/AndroidManifest.xml
         sed -i 's/android:label="Zombie Cafe"/android:label="Zombie Cafe Test"/' build/AndroidManifest.xml
 
-        # Rename smali directories
-        mv build/smali/$OLD_PKG build/smali/$NEW_PKG || true
+        # 2. Loop through all smali folders (handle multidex: smali_classes2 etc)
+        for dir in build/smali*; do
+          if [ -d "$dir/$OLD_PKG_PATH" ]; then
+            mkdir -p "$dir/$NEW_PKG_PATH"
+            cp -r "$dir/$OLD_PKG_PATH/"* "$dir/$NEW_PKG_PATH/"
+            rm -rf "$dir/$OLD_PKG_PATH"
+          fi
+        done
 
-        # Replace all occurrences in smali files
-        find build/smali -type f -name "*.smali" -exec sed -i 's/Lcom\/capcom\/zombiecafe;/Lcom\/capcom\/zombiecafe\/test;/g' {} +
+        # 3. Replace references inside smali files
+        find build/smali* -type f -name "*.smali" -exec sed -i "s/L$OLD_PACKAGE_NAME;/L$NEW_PACKAGE_NAME;/g" {} +
 
-        # Fix any path-related issues (create parent directories if needed)
-        mkdir -p build/smali/com/capcom/zombiecafe/test
 
     - name: Rebuild APK with apktool
       run: |
