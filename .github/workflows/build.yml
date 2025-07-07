@@ -36,13 +36,6 @@ jobs:
     - name: Set up Android SDK and NDK
       uses: android-actions/setup-android@v3
 
-    - name: Install apktool
-      run: |
-        wget https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.7.0.jar -O apktool.jar
-        echo -e '#!/bin/sh\njava -jar $PWD/apktool.jar "$@"' > apktool
-        chmod +x apktool apktool.jar
-        sudo mv apktool apktool.jar /usr/local/bin/
-
     - name: Build C++ extension with CMake & Make
       working-directory: src/lib/cpp
       run: |
