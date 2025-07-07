@@ -56,33 +56,13 @@ jobs:
     - name: Download apktool
       run: |
         curl -L -o apktool.jar https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar
-    
-    - name: Patch package name for test build
+
+    - name: Decode APK
       run: |
-        # Real internal Java package
-        OLD_PACKAGE_NAME="com.capcom.zombiecafeandroid"
-        NEW_PACKAGE_NAME="com.capcom.zombiecafeandroid.test"
+        java -jar apktool.jar d path/to/original.apk -o build --force
 
-        OLD_PKG_PATH="com/capcom/zombiecafeandroid"
-        NEW_PKG_PATH="com/capcom/zombiecafeandroid/test"
-
-        # 1. Patch manifest
-        sed -i 's/android:label="Zombie Cafe"/android:label="Zombie Cafe Test"/' build/AndroidManifest.xml
-        sed -i "s/package=\"[^\"]*\"/package=\"$NEW_PACKAGE_NAME\"/" build/AndroidManifest.xml
-
-        # 2. Loop through all smali folders (skip already-renamed ones)
-        for dir in build/smali*; do
-          if [ -d "$dir/$OLD_PKG_PATH" ]; then
-            echo "Renaming package in $dir..."
-            mkdir -p "$dir/$NEW_PKG_PATH"
-            cp -r "$dir/$OLD_PKG_PATH/"* "$dir/$NEW_PKG_PATH/"
-            rm -rf "$dir/$OLD_PKG_PATH"
-          fi
-        done
-
-        # 3. Replace all internal references (excluding already renamed)
-        find build/smali* -type f -name "*.smali" ! -path "*/$NEW_PKG_PATH/*" \
-          -exec sed -i "s/L$OLD_PACKAGE_NAME;/L$NEW_PACKAGE_NAME;/g" {} +
+    - name: Replace AndroidManifest.xml with test version
+      run: cp src/test-ver/AndroidManifest.xml build/AndroidManifest.xml
 
     - name: Rebuild APK with apktool
       run: |
@@ -101,5 +81,5 @@ jobs:
     - name: Upload modded APK
       uses: actions/upload-artifact@v4
       with:
-        name: zombie-cafe-revival-balance-devtest.apk
+        name: zombie-cafe-revival-balance-devtest
         path: build/out/zombie-cafe-revival-devtest.apk
