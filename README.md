@@ -1,3 +1,6 @@
+This is all possible thanks to Airyzz for making [Zombie Cafe Revival](https://github.com/Airyzz/zombie-cafe-revival).
+From the name you can tell this is where I'll try to balance the time sink of the game to be less of a waiting game
+
 ![test](/src/assets/images/banner.png)
 # Zombie Cafe Revival
 An effort to reverse engineer and revive the game, reimplementing online services, fixing crashes and adding new content.
