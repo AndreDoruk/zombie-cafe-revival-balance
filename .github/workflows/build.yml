@@ -60,8 +60,13 @@ jobs:
     - name: Copy native library into build
       run: cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi/libZombieCafeExtension.so
 
+    - name: Download apktool
+      run: |
+        curl -L -o apktool.jar https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar
+
     - name: Rebuild APK with apktool
-      run: apktool b build -o build/out/out.apk
+      run: |
+        java -jar apktool.jar b build -o build/out/out.apk
 
     - name: Sign APK
       # assumes debug.keystore is in the repo root; if not, generate with keytool here
