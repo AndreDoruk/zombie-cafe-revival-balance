@@ -59,16 +59,18 @@ jobs:
     
     - name: Patch package name for test build
       run: |
-        OLD_PACKAGE_NAME="com.capcom.zombiecafe"
-        NEW_PACKAGE_NAME="com.capcom.zombiecafe.test"
-        OLD_PKG_PATH="com/capcom/zombiecafe"
-        NEW_PKG_PATH="com/capcom/zombiecafe/test"
+        # Real internal Java package
+        OLD_PACKAGE_NAME="com.capcom.zombiecafeandroid"
+        NEW_PACKAGE_NAME="com.capcom.zombiecafeandroid.test"
 
-        # 1. Change package in AndroidManifest.xml
-        sed -i "s/package=\"$OLD_PACKAGE_NAME\"/package=\"$NEW_PACKAGE_NAME\"/" build/AndroidManifest.xml
+        OLD_PKG_PATH="com/capcom/zombiecafeandroid"
+        NEW_PKG_PATH="com/capcom/zombiecafeandroid/test"
+
+        # 1. Patch manifest (for display purposes)
         sed -i 's/android:label="Zombie Cafe"/android:label="Zombie Cafe Test"/' build/AndroidManifest.xml
+        sed -i "s/package=\"[^\"]*\"/package=\"$NEW_PACKAGE_NAME\"/" build/AndroidManifest.xml
 
-        # 2. Loop through all smali folders (handle multidex: smali_classes2 etc)
+        # 2. Loop through all smali folders (smali, smali_classes2, etc.)
         for dir in build/smali*; do
           if [ -d "$dir/$OLD_PKG_PATH" ]; then
             mkdir -p "$dir/$NEW_PKG_PATH"
@@ -77,7 +79,7 @@ jobs:
           fi
         done
 
-        # 3. Replace references inside smali files
+        # 3. Replace all internal references
         find build/smali* -type f -name "*.smali" -exec sed -i "s/L$OLD_PACKAGE_NAME;/L$NEW_PACKAGE_NAME;/g" {} +
 
 
