@@ -59,7 +59,7 @@ jobs:
 
     - name: Rebuild APK with apktool
       run: |
-        java -jar apktool.jar b build -o build/out/out.apk
+        java -jar apktool.jar b build -o build/out/zombie-cafe-revival-balance.apk
 
     - name: Sign APK
       # assumes debug.keystore is in the repo root; if not, generate with keytool here
@@ -68,11 +68,11 @@ jobs:
           -sigalg SHA1withRSA -digestalg SHA1 \
           -keystore debug.keystore \
           -storepass "${{ env.KEYSTORE_PASSWORD }}" \
-          build/out/out.apk \
+          build/out/zombie-cafe-revival-balance.apk \
           "${{ env.KEY_ALIAS }}"
 
     - name: Upload modded APK
       uses: actions/upload-artifact@v4
       with:
-        name: zombie-cafe-revival-balance.apk
-        path: build/out/out.apk
+        name: zombie-cafe-revival-balance
+        path: build/out/zombie-cafe-revival-balance.apk
