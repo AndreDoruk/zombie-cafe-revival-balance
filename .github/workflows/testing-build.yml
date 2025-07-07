@@ -22,7 +22,7 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v3
 
-    - name: Set up JDK 11
+    - name: Set up JDK 17
       uses: actions/setup-java@v3
       with:
         distribution: temurin
@@ -57,16 +57,20 @@ jobs:
       run: |
         curl -L -o apktool.jar https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar
 
-    - name: Decode APK
-      run: |
-        java -jar apktool.jar d path/to/original.apk -o build --force
-
-    - name: Replace AndroidManifest.xml with test version
-      run: cp src/test-ver/AndroidManifest.xml build/AndroidManifest.xml
-
     - name: Rebuild APK with apktool
       run: |
         java -jar apktool.jar b build -o build/out/zombie-cafe-revival-devtest.apk
+
+    - name: Decode APK
+      run: |
+        java -jar apktool.jar d build/out/zombie-cafe-revival-devtest.apk -o build/decoded_apk --force
+
+    - name: Replace AndroidManifest.xml with test version
+      run: cp src/test-ver/AndroidManifest.xml build/decoded_apk/AndroidManifest.xml
+
+    - name: Rebuild APK with apktool
+      run: |
+        java -jar apktool.jar b build/decoded_apk -o build/out/zombie-cafe-revival-devtest.apk
 
     - name: Sign APK
       # assumes debug.keystore is in the repo root; if not, generate with keytool here
