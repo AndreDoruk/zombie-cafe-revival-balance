@@ -1,4 +1,4 @@
-name: Build Zombie Cafe Mod APK
+name: Build Zombie Cafe Testing APK
 
 on:
   push:
