@@ -8,10 +8,11 @@ doNotCompress:
 - mid
 isFrameworkApk: false
 packageInfo:
+  forcedPackageId: '127'
   renameManifestPackage: null
 sdkInfo:
   minSdkVersion: '8'
-  targetSdkVersion: '28'
+  targetSdkVersion: '34'
 sharedLibrary: false
 sparseResources: true
 unknownFiles:
