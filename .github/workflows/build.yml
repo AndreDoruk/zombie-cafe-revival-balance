@@ -6,69 +6,100 @@ on:
       - main
   pull_request:
 
+env:
+  ANDROID_NDK_VERSION: "21.4.7075529"
+  ANDROID_API_LEVEL: "28"
+  BUILD_TOOLS: "30.0.3"
+  KEYSTORE_PASSWORD: "zombiecafe"
+  KEY_ALIAS: "alias_name"
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      NDK_HOME: /usr/local/lib/android/sdk/ndk/26.1.10909125
-
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y apktool openjdk-17-jdk zipalign unzip
-
-      - name: Download original APK
-        run: |
-          mkdir original
-          curl -L -o original/zombie-cafe-original.apk "https://example.com/zombie-cafe-original.apk"
-
-      - name: Extract original APK
-        run: |
-          apktool d -f -o build original/zombie-cafe-original.apk
-
-      - name: Extract original libZombieCafeAndroid.so
-        run: |
-          mkdir -p build/lib/armeabi-v7a
-          unzip -j original/zombie-cafe-original.apk "lib/armeabi/libZombieCafeAndroid.so" -d build/lib/armeabi-v7a
-
-      - name: Set up Android NDK
-        uses: nttld/setup-ndk@v1
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
         with:
-          ndk-version: r26d
-          add-to-path: true
+          distribution: temurin
+          java-version: 17
 
-      - name: Build libZombieCafeExtension.so
+      - name: Set up Go 1.21
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Set up Android SDK and NDK
+        uses: android-actions/setup-android@v3
+        with:
+          ndk-version: ${{ env.ANDROID_NDK_VERSION }}
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          build-tools: ${{ env.BUILD_TOOLS }}
+
+      - name: Install Android SDK components
         run: |
-          cd src/lib/cpp
+          yes | sdkmanager \
+            "platform-tools" \
+            "platforms;android-${{ env.ANDROID_API_LEVEL }}" \
+            "build-tools;${{ env.BUILD_TOOLS }}"
+
+      - name: Build C++ extension with CMake & Make
+        working-directory: src/lib/cpp
+        run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_TOOLCHAIN_FILE=$NDK_HOME/build/cmake/android.toolchain.cmake -DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-8
+          cmake ../ \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=armeabi-v7a \
+            -DANDROID_PLATFORM=android-8
           make
 
-      - name: Copy libZombieCafeExtension.so into APK
-        run: |
-          cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi-v7a/
+      - name: Run Go build_tool
+        run: go run ./tool/build_tool/ -i src/ -o build/
 
-      - name: Rebuild APK with both .so files
+      - name: Copy original libZombieCafeAndroid.so
         run: |
-          apktool b build -o build/out/zombie-cafe-revival-unsigned.apk
+          mkdir -p build/lib/armeabi-v7a
+          cp src/lib/armeabi/libZombieCafeAndroid.so build/lib/armeabi-v7a/libZombieCafeAndroid.so
 
-      - name: Sign APK
+      - name: Copy native library libZombieCafeExtension.so
         run: |
-          keytool -genkey -v -keystore debug.keystore -storepass zombiecafe -alias zombiecafe -keypass zombiecafe -dname "CN=ZombieCafe, OU=Dev, O=Capcom, L=Osaka, ST=Japan, C=JP" -keyalg RSA -keysize 2048 -validity 10000
-          jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore debug.keystore -storepass zombiecafe build/out/zombie-cafe-revival-unsigned.apk zombiecafe
+          cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi-v7a/libZombieCafeExtension.so
 
-      - name: Align APK
+      - name: Clean apktool.yml (remove bad fields)
         run: |
-          zipalign -v 4 build/out/zombie-cafe-revival-unsigned.apk build/out/zombie-cafe-revival-patched.apk
+          echo "Cleaning apktool.yml..."
+          sed -i '/forcedPackageId:/d' build/apktool.yml
+          sed -i 's/sparseResources: true/sparseResources: false/' build/apktool.yml || true
 
-      - name: Upload final APK
+      - name: Rebuild APK with apktool
+        run: |
+          wget https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O apktool.jar
+          java -jar apktool.jar b build -o build/out/zombie-cafe-revival-balance-unsigned.apk
+
+      - name: Zipalign APK
+        run: |
+          $ANDROID_SDK_ROOT/build-tools/${{ env.BUILD_TOOLS }}/zipalign -v -p 4 \
+            build/out/zombie-cafe-revival-balance-unsigned.apk \
+            build/out/zombie-cafe-revival-balance-aligned.apk
+
+      - name: Sign APK with apksigner (v1 + v2)
+        run: |
+          $ANDROID_SDK_ROOT/build-tools/${{ env.BUILD_TOOLS }}/apksigner sign \
+            --ks debug.keystore \
+            --ks-key-alias ${{ env.KEY_ALIAS }} \
+            --ks-pass pass:${{ env.KEYSTORE_PASSWORD }} \
+            --key-pass pass:${{ env.KEYSTORE_PASSWORD }} \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --out build/out/zombie-cafe-revival-balance-signed.apk \
+            build/out/zombie-cafe-revival-balance-aligned.apk
+
+      - name: Upload modded APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: zombie-cafe-revival-patched
-          path: build/out/zombie-cafe-revival-patched.apk
+          name: zombie-cafe-revival-balance
+          path: build/out/zombie-cafe-revival-balance-signed.apk
