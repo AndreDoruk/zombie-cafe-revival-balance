@@ -33,13 +33,22 @@ jobs:
       with:
         go-version: '1.21'
 
-    - name: Set up Android SDK
+    - name: Set up Android SDK and packages
       uses: android-actions/setup-android@v3
       with:
-        api-level: 28
-        build-tools: 30.0.3
-        ndk-version: ${{ env.ANDROID_NDK_VERSION }}
+        cmdline-tools-version: 'latest'
+        accept-android-sdk-licenses: true
+        packages: |
+          platform-tools
+          platforms;android-28
+          build-tools;30.0.3
+          ndk;21.4.7075529
 
+    - name: Debug Android SDK build-tools
+      run: |
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
+        ls -l $ANDROID_SDK_ROOT/build-tools/
+        ls -l $ANDROID_SDK_ROOT/build-tools/*/apksigner || echo "No apksigner found"
 
     - name: Build C++ extension with CMake & Make
       working-directory: src/lib/cpp
@@ -80,7 +89,9 @@ jobs:
 
     - name: Sign APK with apksigner
       run: |
-        $ANDROID_SDK_ROOT/build-tools/30.0.3/apksigner sign \
+        BUILD_TOOLS_DIR=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | sort -V | tail -n1)
+        echo "Using build tools from $BUILD_TOOLS_DIR"
+        $BUILD_TOOLS_DIR/apksigner sign \
           --ks debug.keystore \
           --ks-key-alias "${{ env.KEY_ALIAS }}" \
           --ks-pass pass:${{ env.KEYSTORE_PASSWORD }} \
@@ -89,7 +100,8 @@ jobs:
 
     - name: Verify APK Signature
       run: |
-        $ANDROID_HOME/build-tools/${BUILD_TOOLS}/apksigner verify --verbose build/out/zombie-cafe-revival-balance.apk
+        BUILD_TOOLS_DIR=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | sort -V | tail -n1)
+        $BUILD_TOOLS_DIR/apksigner verify --verbose build/out/zombie-cafe-revival-balance.apk
 
     - name: Upload modded APK
       uses: actions/upload-artifact@v4
