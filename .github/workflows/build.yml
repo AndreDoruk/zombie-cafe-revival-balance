@@ -7,11 +7,10 @@ on:
   pull_request:
 
 env:
-  # match whatever NDK version you need; this one’s just an example
   ANDROID_NDK_VERSION: "21.4.7075529"
   ANDROID_API_LEVEL: "28"
   BUILD_TOOLS: "30.0.3"
-  KEYSTORE_PASSWORD: "zombiecafe"      # keep this in GitHub Secrets if this were real
+  KEYSTORE_PASSWORD: "zombiecafe"
   KEY_ALIAS: "alias_name"
 
 jobs:
@@ -51,7 +50,7 @@ jobs:
       run: go run ./tool/build_tool/ -i src/ -o build/
 
     - name: Copy native library into build
-      run: cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi/libZombieCafeExtension.so
+      run: mkdir -p build/lib/armeabi && cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi/
 
     - name: Download apktool
       run: |
@@ -61,15 +60,30 @@ jobs:
       run: |
         java -jar apktool.jar b build -o build/out/zombie-cafe-revival-balance.apk
 
-    - name: Sign APK
-      # assumes debug.keystore is in the repo root; if not, generate with keytool here
+    - name: Generate keystore if needed
       run: |
-        jarsigner -verbose \
-          -sigalg SHA1withRSA -digestalg SHA1 \
-          -keystore debug.keystore \
-          -storepass "${{ env.KEYSTORE_PASSWORD }}" \
-          build/out/zombie-cafe-revival-balance.apk \
-          "${{ env.KEY_ALIAS }}"
+        if [ ! -f debug.keystore ]; then
+          keytool -genkey -v \
+            -keystore debug.keystore \
+            -alias "${KEY_ALIAS}" \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "${KEYSTORE_PASSWORD}" \
+            -keypass "${KEYSTORE_PASSWORD}" \
+            -dname "CN=ZombieCafe, OU=Dev, O=Mod, L=City, S=State, C=US"
+        fi
+
+    - name: Sign APK with apksigner
+      run: |
+        $ANDROID_HOME/build-tools/${BUILD_TOOLS}/apksigner sign \
+          --ks debug.keystore \
+          --ks-key-alias "${KEY_ALIAS}" \
+          --ks-pass pass:"${KEYSTORE_PASSWORD}" \
+          --key-pass pass:"${KEYSTORE_PASSWORD}" \
+          build/out/zombie-cafe-revival-balance.apk
+
+    - name: Verify APK Signature
+      run: |
+        $ANDROID_HOME/build-tools/${BUILD_TOOLS}/apksigner verify --verbose build/out/zombie-cafe-revival-balance.apk
 
     - name: Upload modded APK
       uses: actions/upload-artifact@v4
