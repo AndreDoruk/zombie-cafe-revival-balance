@@ -39,10 +39,11 @@ jobs:
         cmdline-tools-version: 'latest'
         accept-android-sdk-licenses: true
         packages: |
-          platform-tools
-          platforms;android-28
-          build-tools;30.0.3
-          ndk;21.4.7075529
+          "platform-tools"
+          "platforms;android-28"
+          "build-tools;30.0.3"
+          "ndk;21.4.7075529"
+
 
     - name: Debug Android SDK build-tools
       run: |
