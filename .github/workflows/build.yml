@@ -39,7 +39,7 @@ jobs:
           api-level: ${{ env.ANDROID_API_LEVEL }}
           build-tools: ${{ env.BUILD_TOOLS }}
 
-      - name: Install Android SDK components (build-tools & platforms)
+      - name: Install Android SDK components
         run: |
           yes | sdkmanager \
             "platform-tools" \
@@ -65,34 +65,25 @@ jobs:
           mkdir -p build/lib/armeabi-v7a
           cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi-v7a/libZombieCafeExtension.so
 
-      - name: Download uber-apk-signer
+      - name: Rebuild APK with apktool
+        run: |
+          apktool b ./build -o ./build/out/zombie-cafe-unsigned.apk
+
+      - name: Download Uber APK Signer
         run: |
           curl -L -o uber-apk-signer.jar https://github.com/patrickfav/uber-apk-signer/releases/download/v1.2.1/uber-apk-signer-1.2.1.jar
 
-      - name: Sign with uber-apk-signer
+      - name: Sign APK with Uber APK Signer
         run: |
-          java -jar uber-apk-signer.jar --apk build/out/zombie-cafe-revival-balance-aligned.apk --ks debug.keystore --ksAlias ${{ env.KEY_ALIAS }} --ksPass ${{ env.KEYSTORE_PASSWORD }} --keyPass ${{ env.KEYSTORE_PASSWORD }}
-
-      - name: Zipalign APK
-        run: |
-          $ANDROID_SDK_ROOT/build-tools/${{ env.BUILD_TOOLS }}/zipalign -v -p 4 \
-            build/out/zombie-cafe-revival-balance.apk \
-            build/out/zombie-cafe-revival-balance-aligned.apk
-
-      - name: Sign APK with apksigner (v1 + v2)
-        run: |
-          $ANDROID_SDK_ROOT/build-tools/${{ env.BUILD_TOOLS }}/apksigner sign \
+          java -jar uber-apk-signer.jar \
+            --apks ./build/out/zombie-cafe-unsigned.apk \
             --ks debug.keystore \
-            --ks-key-alias ${{ env.KEY_ALIAS }} \
-            --ks-pass pass:${{ env.KEYSTORE_PASSWORD }} \
-            --key-pass pass:${{ env.KEYSTORE_PASSWORD }} \
-            --v1-signing-enabled true \
-            --v2-signing-enabled true \
-            --out build/out/zombie-cafe-revival-balance-signed.apk \
-            build/out/zombie-cafe-revival-balance-aligned.apk
+            --ksAlias ${{ env.KEY_ALIAS }} \
+            --ksPass ${{ env.KEYSTORE_PASSWORD }} \
+            --keyPass ${{ env.KEYSTORE_PASSWORD }}
 
-      - name: Upload modded APK artifact
+      - name: Upload signed modded APK
         uses: actions/upload-artifact@v4
         with:
           name: zombie-cafe-revival-balance
-          path: build/out/zombie-cafe-revival-balance-signed.apk
+          path: build/out/zombie-cafe-unsigned-aligned-debugSigned.apk
