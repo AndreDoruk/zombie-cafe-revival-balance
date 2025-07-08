@@ -93,4 +93,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zombie-cafe-revival-balance
-          path: build/out/zombie-cafe-revival-balance.apk
+          path: build/out/zombie-cafe-revival-balance-signed.apk
