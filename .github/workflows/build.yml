@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
@@ -68,7 +68,7 @@ jobs:
           zipalign -v 4 build/out/zombie-cafe-revival-unsigned.apk build/out/zombie-cafe-revival-patched.apk
 
       - name: Upload final APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: zombie-cafe-revival-patched
           path: build/out/zombie-cafe-revival-patched.apk
