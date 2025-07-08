@@ -1,9 +1,17 @@
-<?xml version="1.0" encoding="utf-8" standalone="no"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="preferExternal" package="com.capcom.zombiecafeandroid">
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" android:installLocation="preferExternal" package="com.capcom.zombiecafeandroid">
     <supports-screens android:largeScreens="true" android:normalScreens="true" android:smallScreens="false"/>
     <uses-sdk android:minSdkVersion="8" android:targetSdkVersion="34"/>
     <uses-feature android:glEsVersion="1"/>
     <application android:icon="@mipmap/ic_launcher" android:roundIcon="@mipmap/ic_launcher_round" android:usesCleartextTraffic="true" android:extractNativeLibs="true" android:label="@string/app_name" android:name=".MyApplication">
-        <activity android:configChanges="keyboardHidden|orientation" android:label="@string/app_name" android:launchMode="singleTask" android:name=".ZombieCafeAndroid" android:screenOrientation="landscape" android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+        <activity
+            android:configChanges="keyboardHidden|orientation"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:name=".ZombieCafeAndroid"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -13,10 +21,15 @@
                 <category android:name="android.intent.category.DEFAULT"/>
             </intent-filter>
         </activity>
-        <activity android:name="com.capcom.billing.SmurfsBilling"/>
-        <activity android:configChanges="keyboard|keyboardHidden|orientation" android:name="com.chartboost.sdk.CBDialogActivity" android:screenOrientation="landscape" android:theme="@android:style/Theme.NoTitleBar.Fullscreen"/>
-        <service android:name="com.capcom.billing.BillingService"/>
-        <receiver android:name="com.capcom.billing.BillingReceiver">
+        <activity android:name="com.capcom.billing.SmurfsBilling" android:exported="false"/>
+        <activity
+            android:configChanges="keyboard|keyboardHidden|orientation"
+            android:name="com.chartboost.sdk.CBDialogActivity"
+            android:screenOrientation="landscape"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:exported="false"/>
+        <service android:name="com.capcom.billing.BillingService" android:exported="false"/>
+        <receiver android:name="com.capcom.billing.BillingReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="com.android.vending.billing.IN_APP_NOTIFY"/>
                 <action android:name="com.android.vending.billing.RESPONSE_CODE"/>
@@ -29,7 +42,7 @@
             </intent-filter>
             <meta-data android:name="com.tapjoy.TapjoyReferralTracker" android:value="com.android.vending.INSTALL_REFERRER"/>
         </receiver>
-        <receiver android:name="com.capcom.zombiecafeandroid.AlarmReceiver"/>
+        <receiver android:name="com.capcom.zombiecafeandroid.AlarmReceiver" android:exported="false"/>
     </application>
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
@@ -44,5 +57,4 @@
         <background android:drawable="@color/ic_launcher_background" />
         <foreground android:drawable="@mipmap/ic_launcher_foreground" />
     </adaptive-icon>
-
 </manifest>
