@@ -7,12 +7,12 @@ on:
   pull_request:
 
 env:
+  # match whatever NDK version you need; this one’s just an example
   ANDROID_NDK_VERSION: "21.4.7075529"
   ANDROID_API_LEVEL: "28"
   BUILD_TOOLS: "30.0.3"
-  KEYSTORE_PASSWORD: "zombiecafe"
+  KEYSTORE_PASSWORD: "zombiecafe"      # keep this in GitHub Secrets if this were real
   KEY_ALIAS: "alias_name"
-  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
 jobs:
   build:
@@ -33,23 +33,8 @@ jobs:
       with:
         go-version: '1.21'
 
-    - name: Set up Android SDK and packages
+    - name: Set up Android SDK and NDK
       uses: android-actions/setup-android@v3
-      with:
-        cmdline-tools-version: 'latest'
-        accept-android-sdk-licenses: true
-        packages: |
-          "platform-tools"
-          "platforms;android-28"
-          "build-tools;30.0.3"
-          "ndk;21.4.7075529"
-
-
-    - name: Debug Android SDK build-tools
-      run: |
-        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-        ls -l $ANDROID_SDK_ROOT/build-tools/
-        ls -l $ANDROID_SDK_ROOT/build-tools/*/apksigner || echo "No apksigner found"
 
     - name: Build C++ extension with CMake & Make
       working-directory: src/lib/cpp
@@ -61,49 +46,27 @@ jobs:
           -DANDROID_ABI=armeabi-v7a \
           -DANDROID_PLATFORM=android-8
         make
-
     - name: Run build_tool (Go)
       run: go run ./tool/build_tool/ -i src/ -o build/
 
     - name: Copy native library into build
-      run: mkdir -p build/lib/armeabi && cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi/
+      run: cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi/libZombieCafeExtension.so
 
     - name: Download apktool
       run: |
         curl -L -o apktool.jar https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar
-
     - name: Rebuild APK with apktool
       run: |
         java -jar apktool.jar b build -o build/out/zombie-cafe-revival-balance.apk
-
-    - name: Generate keystore if needed
+    - name: Sign APK
+      # assumes debug.keystore is in the repo root; if not, generate with keytool here
       run: |
-        if [ ! -f debug.keystore ]; then
-          keytool -genkey -v \
-            -keystore debug.keystore \
-            -alias "${KEY_ALIAS}" \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass "${KEYSTORE_PASSWORD}" \
-            -keypass "${KEYSTORE_PASSWORD}" \
-            -dname "CN=ZombieCafe, OU=Dev, O=Mod, L=City, S=State, C=US"
-        fi
-
-    - name: Sign APK with apksigner
-      run: |
-        BUILD_TOOLS_DIR=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | sort -V | tail -n1)
-        echo "Using build tools from $BUILD_TOOLS_DIR"
-        $BUILD_TOOLS_DIR/apksigner sign \
-          --ks debug.keystore \
-          --ks-key-alias "${{ env.KEY_ALIAS }}" \
-          --ks-pass pass:${{ env.KEYSTORE_PASSWORD }} \
-          --key-pass pass:${{ env.KEYSTORE_PASSWORD }} \
-          build/out/zombie-cafe-revival-balance.apk
-
-    - name: Verify APK Signature
-      run: |
-        BUILD_TOOLS_DIR=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | sort -V | tail -n1)
-        $BUILD_TOOLS_DIR/apksigner verify --verbose build/out/zombie-cafe-revival-balance.apk
-
+        jarsigner -verbose \
+          -sigalg SHA1withRSA -digestalg SHA1 \
+          -keystore debug.keystore \
+          -storepass "${{ env.KEYSTORE_PASSWORD }}" \
+          build/out/zombie-cafe-revival-balance.apk \
+          "${{ env.KEY_ALIAS }}"
     - name: Upload modded APK
       uses: actions/upload-artifact@v4
       with:
