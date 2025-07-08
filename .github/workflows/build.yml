@@ -60,23 +60,26 @@ jobs:
       - name: Run Go build_tool
         run: go run ./tool/build_tool/ -i src/ -o build/
 
-      - name: Copy native library into armeabi-v7a folder
+      - name: Copy native library
         run: |
           mkdir -p build/lib/armeabi-v7a
           cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi-v7a/libZombieCafeExtension.so
 
-      - name: Download apktool
+      - name: Clean apktool.yml (remove bad fields)
         run: |
-          curl -L -o apktool.jar https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar
+          echo "Cleaning apktool.yml..."
+          sed -i '/forcedPackageId:/d' build/apktool.yml
+          sed -i 's/sparseResources: true/sparseResources: false/' build/apktool.yml || true
 
       - name: Rebuild APK with apktool
         run: |
-          java -jar apktool.jar b build -o build/out/zombie-cafe-revival-balance.apk
+          wget https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O apktool.jar
+          java -jar apktool.jar b build -o build/out/zombie-cafe-revival-balance-unsigned.apk
 
       - name: Zipalign APK
         run: |
           $ANDROID_SDK_ROOT/build-tools/${{ env.BUILD_TOOLS }}/zipalign -v -p 4 \
-            build/out/zombie-cafe-revival-balance.apk \
+            build/out/zombie-cafe-revival-balance-unsigned.apk \
             build/out/zombie-cafe-revival-balance-aligned.apk
 
       - name: Sign APK with apksigner (v1 + v2)
