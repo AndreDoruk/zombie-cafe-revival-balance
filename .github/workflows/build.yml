@@ -12,6 +12,7 @@ env:
   BUILD_TOOLS: "30.0.3"
   KEYSTORE_PASSWORD: "zombiecafe"
   KEY_ALIAS: "alias_name"
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
 jobs:
   build:
@@ -32,8 +33,13 @@ jobs:
       with:
         go-version: '1.21'
 
-    - name: Set up Android SDK and NDK
+    - name: Set up Android SDK
       uses: android-actions/setup-android@v3
+      with:
+        api-level: 28
+        build-tools: 30.0.3
+        ndk-version: ${{ env.ANDROID_NDK_VERSION }}
+
 
     - name: Build C++ extension with CMake & Make
       working-directory: src/lib/cpp
@@ -74,11 +80,11 @@ jobs:
 
     - name: Sign APK with apksigner
       run: |
-        $ANDROID_HOME/build-tools/${BUILD_TOOLS}/apksigner sign \
+        $ANDROID_SDK_ROOT/build-tools/30.0.3/apksigner sign \
           --ks debug.keystore \
-          --ks-key-alias "${KEY_ALIAS}" \
-          --ks-pass pass:"${KEYSTORE_PASSWORD}" \
-          --key-pass pass:"${KEYSTORE_PASSWORD}" \
+          --ks-key-alias "${{ env.KEY_ALIAS }}" \
+          --ks-pass pass:${{ env.KEYSTORE_PASSWORD }} \
+          --key-pass pass:${{ env.KEYSTORE_PASSWORD }} \
           build/out/zombie-cafe-revival-balance.apk
 
     - name: Verify APK Signature
