@@ -39,6 +39,13 @@ jobs:
           api-level: ${{ env.ANDROID_API_LEVEL }}
           build-tools: ${{ env.BUILD_TOOLS }}
 
+      - name: Install Android SDK components (build-tools & platforms)
+        run: |
+          yes | sdkmanager \
+            "platform-tools" \
+            "platforms;android-${{ env.ANDROID_API_LEVEL }}" \
+            "build-tools;${{ env.BUILD_TOOLS }}"
+
       - name: Build C++ extension with CMake & Make
         working-directory: src/lib/cpp
         run: |
