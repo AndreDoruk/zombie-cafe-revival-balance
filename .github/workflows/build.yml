@@ -79,13 +79,15 @@ jobs:
             build/out/zombie-cafe-revival-balance.apk \
             build/out/zombie-cafe-revival-balance-aligned.apk
 
-      - name: Sign APK with apksigner (v2+)
+      - name: Sign APK with apksigner (v1 + v2)
         run: |
           $ANDROID_SDK_ROOT/build-tools/${{ env.BUILD_TOOLS }}/apksigner sign \
             --ks debug.keystore \
             --ks-key-alias ${{ env.KEY_ALIAS }} \
             --ks-pass pass:${{ env.KEYSTORE_PASSWORD }} \
             --key-pass pass:${{ env.KEYSTORE_PASSWORD }} \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
             --out build/out/zombie-cafe-revival-balance-signed.apk \
             build/out/zombie-cafe-revival-balance-aligned.apk
 
