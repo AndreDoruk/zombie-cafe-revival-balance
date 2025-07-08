@@ -2,73 +2,118 @@ name: Build Zombie Cafe Mod APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
 
 env:
-  # match whatever NDK version you need; this one’s just an example
   ANDROID_NDK_VERSION: "21.4.7075529"
   ANDROID_API_LEVEL: "28"
   BUILD_TOOLS: "30.0.3"
-  KEYSTORE_PASSWORD: "zombiecafe"      # keep this in GitHub Secrets if this were real
+  KEYSTORE_PASSWORD: "zombiecafe"
   KEY_ALIAS: "alias_name"
+  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Check out code
-      uses: actions/checkout@v3
+      - name: Check out code
+        uses: actions/checkout@v3
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        distribution: temurin
-        java-version: 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
 
-    - name: Set up Android SDK and NDK
-      uses: android-actions/setup-android@v3
+      # Install Android command‑line tools
+      - name: Download Android SDK Command‑line Tools
+        run: |
+          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+          cd $ANDROID_SDK_ROOT/cmdline-tools
+          curl -sSL https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip \
+            -o cmdline-tools.zip
+          unzip -q cmdline-tools.zip
+          mv cmdline-tools latest
+          rm cmdline-tools.zip
 
-    - name: Build C++ extension with CMake & Make
-      working-directory: src/lib/cpp
-      run: |
-        mkdir -p build
-        cd build
-        cmake ../ \
-          -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
-          -DANDROID_ABI=armeabi-v7a \
-          -DANDROID_PLATFORM=android-8
-        make
-    - name: Run build_tool (Go)
-      run: go run ./tool/build_tool/ -i src/ -o build/
+      - name: Accept licenses
+        run: yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses
 
-    - name: Copy native library into build
-      run: cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi/libZombieCafeExtension.so
+      - name: Install SDK packages
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager \
+            "platform-tools" \
+            "platforms;android-28" \
+            "build-tools;${BUILD_TOOLS}" \
+            "ndk;${ANDROID_NDK_VERSION}"
 
-    - name: Download apktool
-      run: |
-        curl -L -o apktool.jar https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar
-    - name: Rebuild APK with apktool
-      run: |
-        java -jar apktool.jar b build -o build/out/zombie-cafe-revival-balance.apk
-    - name: Sign APK
-      # assumes debug.keystore is in the repo root; if not, generate with keytool here
-      run: |
-        jarsigner -verbose \
-          -sigalg SHA1withRSA -digestalg SHA1 \
-          -keystore debug.keystore \
-          -storepass "${{ env.KEYSTORE_PASSWORD }}" \
-          build/out/zombie-cafe-revival-balance.apk \
-          "${{ env.KEY_ALIAS }}"
-    - name: Upload modded APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: zombie-cafe-revival-balance
-        path: build/out/zombie-cafe-revival-balance.apk
+      - name: Debug SDK layout
+        run: |
+          echo "Available build-tools:"
+          ls -1 $ANDROID_SDK_ROOT/build-tools/
+
+      - name: Build C++ extension
+        working-directory: src/lib/cpp
+        run: |
+          mkdir -p build && cd build
+          cmake ../ \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=armeabi-v7a \
+            -DANDROID_PLATFORM=android-8
+          make
+
+      - name: Run build_tool (Go)
+        run: go run ./tool/build_tool/ -i src/ -o build/
+
+      - name: Copy native library
+        run: |
+          mkdir -p build/lib/armeabi
+          cp src/lib/cpp/build/libZombieCafeExtension.so build/lib/armeabi/
+
+      - name: Download apktool
+        run: |
+          curl -L -o apktool.jar https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar
+
+      - name: Rebuild APK with apktool
+        run: |
+          java -jar apktool.jar b build -o build/out/zombie-cafe-revival-balance.apk
+
+      - name: Generate debug keystore if missing
+        run: |
+          if [ ! -f debug.keystore ]; then
+            keytool -genkey -v \
+              -keystore debug.keystore \
+              -alias "${KEY_ALIAS}" \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "${KEYSTORE_PASSWORD}" \
+              -keypass "${KEYSTORE_PASSWORD}" \
+              -dname "CN=ZombieCafe, OU=Dev, O=Mod, L=City, S=State, C=US"
+          fi
+
+      - name: Sign APK with apksigner
+        run: |
+          BT=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | sort -V | tail -n1)
+          echo "Signing with build-tools at $BT"
+          "$BT/apksigner" sign \
+            --ks debug.keystore \
+            --ks-key-alias "${KEY_ALIAS}" \
+            --ks-pass pass:"${KEYSTORE_PASSWORD}" \
+            --key-pass pass:"${KEYSTORE_PASSWORD}" \
+            build/out/zombie-cafe-revival-balance.apk
+
+      - name: Verify APK signature
+        run: |
+          BT=$(ls -d $ANDROID_SDK_ROOT/build-tools/* | sort -V | tail -n1)
+          "$BT/apksigner" verify --verbose build/out/zombie-cafe-revival-balance.apk
+
+      - name: Upload modded APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: zombie-cafe-revival-balance
+          path: build/out/zombie-cafe-revival-balance.apk
