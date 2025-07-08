@@ -71,7 +71,7 @@ jobs:
 
       - name: Rebuild APK with apktool
         run: |
-          java -jar apktool.jar b build -o build/out/zombie-cafe-revival-balance.apk --use-aapt2
+          java -jar apktool.jar b build -o build/out/zombie-cafe-revival-balance.apk
 
       - name: Zipalign APK
         run: |
